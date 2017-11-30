@@ -45,12 +45,23 @@ namespace WebSocketManager
 
             var serializedMessage = JsonConvert.SerializeObject(message, _jsonSerializerSettings);
             var encodedMessage = Encoding.UTF8.GetBytes(serializedMessage);
-            await socket.SendAsync(buffer: new ArraySegment<byte>(array: encodedMessage,
-                                                                  offset: 0,
-                                                                  count: encodedMessage.Length),
-                                   messageType: WebSocketMessageType.Text,
-                                   endOfMessage: true,
-                                   cancellationToken: CancellationToken.None).ConfigureAwait(false);
+
+            try
+            {
+                await socket.SendAsync(buffer: new ArraySegment<byte>(array: encodedMessage,
+                                                                      offset: 0,
+                                                                      count: encodedMessage.Length),
+                                       messageType: WebSocketMessageType.Text,
+                                       endOfMessage: true,
+                                       cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (WebSocketException e)
+            {
+                if (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
+                {
+                    await WebSocketConnectionManager.RemoveSocket(WebSocketConnectionManager.GetId(socket), WebSocketCloseStatus.EndpointUnavailable).ConfigureAwait(false);
+                }
+            }
         }
 
         public async Task SendMessageAsync(string socketId, Message message)

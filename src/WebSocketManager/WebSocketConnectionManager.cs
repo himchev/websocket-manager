@@ -69,14 +69,18 @@ namespace WebSocketManager
             }
         }
 
-        public async Task RemoveSocket(string id)
+        public async Task RemoveSocket(string id, WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure)
         {
             WebSocket socket;
             _sockets.TryRemove(id, out socket);
 
-            await socket.CloseAsync(closeStatus: WebSocketCloseStatus.NormalClosure,
-                                    statusDescription: "Closed by the WebSocketManager",
-                                    cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                await socket.CloseAsync(closeStatus: closeStatus,
+                                        statusDescription: "Closed by the WebSocketManager",
+                                        cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (WebSocketException) { }
         }
 
         private string CreateConnectionId()
