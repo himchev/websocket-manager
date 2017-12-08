@@ -15,7 +15,12 @@ namespace WebSocketManager
 
         public WebSocket GetSocketById(string id)
         {
-            return _sockets.FirstOrDefault(p => p.Key == id).Value;
+            return _sockets.TryGetValue(id, out WebSocket ret) ? ret : null;
+        }
+
+        public bool SocketExists(string id)
+        {
+            return _sockets.ContainsKey(id);
         }
 
         public ConcurrentDictionary<string, WebSocket> GetAll()
@@ -86,6 +91,6 @@ namespace WebSocketManager
         private string CreateConnectionId()
         {
             return Guid.NewGuid().ToString();
-        }
+        }        
     }
 }

@@ -12,6 +12,7 @@ namespace WebSocketManager
 {
     public abstract class WebSocketHandler
     {
+        public WebSocketContext Context { get; set; }
         protected WebSocketConnectionManager WebSocketConnectionManager { get; set; }
         private JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings()
         {
@@ -109,6 +110,12 @@ namespace WebSocketManager
             {
                 foreach (var socket in sockets)
                 {
+                    if (!WebSocketConnectionManager.SocketExists(socket))
+                    {
+                        WebSocketConnectionManager.RemoveFromGroup(socket, groupID);
+                        continue;
+                    }
+
                     await SendMessageAsync(socket, message);
                 }
             }
@@ -121,7 +128,13 @@ namespace WebSocketManager
             {
                 foreach (var id in sockets)
                 {
-                    if(id != except)
+                    if (!WebSocketConnectionManager.SocketExists(id))
+                    {
+                        WebSocketConnectionManager.RemoveFromGroup(id, groupID);
+                        continue;
+                    }
+
+                    if (id != except)
                         await SendMessageAsync(id, message);
                 }
             }
@@ -132,8 +145,14 @@ namespace WebSocketManager
             var sockets = WebSocketConnectionManager.GetAllFromGroup(groupID);
             if (sockets != null)
             {
-                foreach (var id in sockets)
+                foreach (var id in sockets.ToArray())
                 {
+                    if (!WebSocketConnectionManager.SocketExists(id))
+                    {
+                        WebSocketConnectionManager.RemoveFromGroup(id, groupID);
+                        continue;
+                    }
+
                     await InvokeClientMethodAsync(id, methodName, arguments);
                 }
             }
@@ -146,7 +165,13 @@ namespace WebSocketManager
             {
                 foreach (var id in sockets)
                 {
-                    if(id != except)
+                    if (!WebSocketConnectionManager.SocketExists(id))
+                    {
+                        WebSocketConnectionManager.RemoveFromGroup(id, groupID);
+                        continue;
+                    }
+
+                    if (id != except)
                         await InvokeClientMethodAsync(id, methodName, arguments);
                 }
             }
