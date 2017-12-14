@@ -23,20 +23,27 @@ namespace WebSocketManager
             WebSocketConnectionManager = webSocketConnectionManager;
         }
 
-        public virtual async Task OnConnected(WebSocket socket)
+        public virtual async Task<string> OnConnected(WebSocket socket)
         {
-            WebSocketConnectionManager.AddSocket(socket);
+            string id = WebSocketConnectionManager.AddSocket(socket);
 
             await SendMessageAsync(socket, new Message()
             {
                 MessageType = MessageType.ConnectionEvent,
-                Data = WebSocketConnectionManager.GetId(socket)
+                Data = id
             }).ConfigureAwait(false);
+
+            return id;
         }
 
-        public virtual async Task OnDisconnected(WebSocket socket)
+        public virtual async Task OnDisconnected(WebSocket socket, WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure)
         {
-            await WebSocketConnectionManager.RemoveSocket(WebSocketConnectionManager.GetId(socket)).ConfigureAwait(false);
+            await OnDisconnected(socket, WebSocketConnectionManager.GetId(socket), closeStatus).ConfigureAwait(false);
+        }
+
+        public virtual async Task OnDisconnected(WebSocket socket, string socketId, WebSocketCloseStatus closeStatus)
+        {
+            await WebSocketConnectionManager.RemoveSocket(socketId, closeStatus).ConfigureAwait(false);
         }
 
         public async Task SendMessageAsync(WebSocket socket, Message message)
@@ -60,7 +67,7 @@ namespace WebSocketManager
             {
                 if (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
                 {
-                    await WebSocketConnectionManager.RemoveSocket(WebSocketConnectionManager.GetId(socket), WebSocketCloseStatus.EndpointUnavailable).ConfigureAwait(false);
+                    await OnDisconnected(socket, WebSocketCloseStatus.EndpointUnavailable).ConfigureAwait(false);
                 }
             }
         }
@@ -79,7 +86,7 @@ namespace WebSocketManager
             }
         }
 
-        public async Task InvokeClientMethodAsync(string socketId, string methodName, object[] arguments)
+        public async Task InvokeClientMethodAsync(string socketId, string methodName, params object[] arguments)
         {
             var message = new Message()
             {

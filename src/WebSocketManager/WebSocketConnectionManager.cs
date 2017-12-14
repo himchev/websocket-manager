@@ -43,9 +43,13 @@ namespace WebSocketManager
             return _sockets.FirstOrDefault(p => p.Value == socket).Key;
         }
 
-        public void AddSocket(WebSocket socket)
+        public string AddSocket(WebSocket socket)
         {
-            _sockets.TryAdd(CreateConnectionId(), socket);
+            string id = CreateConnectionId();
+
+            _sockets.TryAdd(id, socket);
+
+            return id;
         }
 
         public void AddToGroup(string socketID, string groupID)
@@ -74,7 +78,7 @@ namespace WebSocketManager
             }
         }
 
-        public async Task RemoveSocket(string id, WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure)
+        public async Task RemoveSocket(string id, WebSocketCloseStatus closeStatus)
         {
             WebSocket socket;
             _sockets.TryRemove(id, out socket);
