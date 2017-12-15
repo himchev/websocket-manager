@@ -27,48 +27,34 @@ namespace WebSocketManager
 
             var socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
 
-            _webSocketHandler.Context = new WebSocketContext
-            {
-                Socket = socket,
-                HttpContext = context
-            };
+            await _webSocketHandler.OnConnected(socket).ConfigureAwait(false);
 
-            try
+            await Receive(socket, async (result, serializedInvocationDescriptor) =>
             {
-                await _webSocketHandler.OnConnected(socket).ConfigureAwait(false);
-
-                await Receive(socket, async (result, serializedInvocationDescriptor) =>
+                if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    if (result.MessageType == WebSocketMessageType.Text)
+                    await _webSocketHandler.ReceiveAsync(socket, result, serializedInvocationDescriptor).ConfigureAwait(false);
+                    return;
+                }
+
+                else if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    try
                     {
-                        await _webSocketHandler.ReceiveAsync(socket, result, serializedInvocationDescriptor).ConfigureAwait(false);
-                        return;
+                        await _webSocketHandler.OnDisconnected(socket);
                     }
 
-                    else if (result.MessageType == WebSocketMessageType.Close)
+                    catch (WebSocketException)
                     {
-                        try
-                        {
-                            await _webSocketHandler.OnDisconnected(socket);
-                        }
-
-                        catch (WebSocketException)
-                        {
-                            throw; //let's not swallow any exception for now
-                        }
-
-                        return;
+                        throw; //let's not swallow any exception for now
                     }
 
-                });
+                    return;
+                }
+            });
 
-                //TODO - investigate the Kestrel exception thrown when this is the last middleware
-                //await _next.Invoke(context);
-            }
-            finally
-            {
-                _webSocketHandler.Context = null;
-            }
+            //TODO - investigate the Kestrel exception thrown when this is the last middleware
+            //await _next.Invoke(context);
         }
 
         private async Task Receive(WebSocket socket, Action<WebSocketReceiveResult, string> handleMessage)

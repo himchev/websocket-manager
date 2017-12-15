@@ -12,12 +12,12 @@ namespace WebSocketManager
 {
     public abstract class WebSocketHandler
     {
-        public WebSocketContext Context { get; set; }
         protected WebSocketConnectionManager WebSocketConnectionManager { get; set; }
-        private JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings()
+        protected JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings()
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver()
         };
+
         public WebSocketHandler(WebSocketConnectionManager webSocketConnectionManager)
         {
             WebSocketConnectionManager = webSocketConnectionManager;
@@ -51,7 +51,7 @@ namespace WebSocketManager
             if (socket.State != WebSocketState.Open)
                 return;
 
-            var serializedMessage = JsonConvert.SerializeObject(message, _jsonSerializerSettings);
+            var serializedMessage = JsonConvert.SerializeObject(message, jsonSerializerSettings);
             var encodedMessage = Encoding.UTF8.GetBytes(serializedMessage);
 
             try
@@ -95,7 +95,7 @@ namespace WebSocketManager
                 {
                     MethodName = methodName,
                     Arguments = arguments
-                }, _jsonSerializerSettings)
+                }, jsonSerializerSettings)
             };
 
             await SendMessageAsync(socketId, message).ConfigureAwait(false);
@@ -202,7 +202,11 @@ namespace WebSocketManager
 
             try
             {
-                method.Invoke(this, invocationDescriptor.Arguments);
+                object[] args = new object[invocationDescriptor.Arguments.Length + 1];
+                args[0] = socket;
+                Array.Copy(invocationDescriptor.Arguments, 0, args, 1, invocationDescriptor.Arguments.Length);
+
+                method.Invoke(this, args);
             }
             catch (TargetParameterCountException)
             {
@@ -213,7 +217,7 @@ namespace WebSocketManager
                 }).ConfigureAwait(false);
             }
 
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
                 await SendMessageAsync(socket, new Message()
                 {
