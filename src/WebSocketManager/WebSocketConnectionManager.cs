@@ -32,7 +32,11 @@ namespace WebSocketManager
         {
             if (_groups.ContainsKey(GroupID))
             {
-                return _groups[GroupID];
+                var list = _groups[GroupID];
+                lock (list)
+                {
+                    return new List<string>(list);
+                }
             }
 
             return default(List<string>);
@@ -57,7 +61,10 @@ namespace WebSocketManager
             if (_groups.ContainsKey(groupID))
             {
                 var list = _groups[groupID];
-                list.Add(socketID);
+                lock (list)
+                {
+                    list.Add(socketID);
+                }
                 _groups[groupID] = list;
 
                 return;
@@ -71,7 +78,10 @@ namespace WebSocketManager
             if (_groups.ContainsKey(groupID))
             {
                 var list = _groups[groupID];
-                list.Remove(socketID);
+                lock (list)
+                {
+                    list.Remove(socketID);
+                }
                 _groups[groupID] = list;
 
                 return;
