@@ -38,7 +38,9 @@ namespace WebSocketManager
 
         public virtual async Task OnDisconnected(WebSocket socket, WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure)
         {
-            await OnDisconnected(socket, WebSocketConnectionManager.GetId(socket), closeStatus).ConfigureAwait(false);
+            string socketId = WebSocketConnectionManager.GetId(socket);
+            if(socketId != null)
+                await OnDisconnected(socket, socketId, closeStatus).ConfigureAwait(false);
         }
 
         public virtual async Task OnDisconnected(WebSocket socket, string socketId, WebSocketCloseStatus closeStatus)
@@ -48,7 +50,7 @@ namespace WebSocketManager
 
         public async Task SendMessageAsync(WebSocket socket, Message message)
         {
-            if (socket.State != WebSocketState.Open)
+            if (socket == null || socket.State != WebSocketState.Open)
                 return;
 
             var serializedMessage = JsonConvert.SerializeObject(message, jsonSerializerSettings);
